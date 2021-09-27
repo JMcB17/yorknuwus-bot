@@ -1,0 +1,9 @@
+[auth]
+consumer_key = ""
+consumer_secret = ""
+access_token = ""
+access_token_secret = ""
+
+[settings]
+source = "yorknouse"
+url_regex = "https?://nouse.co.uk/[0-9]{4}/[0-9]{2}/[0-9]{2}/.*"
