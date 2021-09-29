@@ -7,23 +7,36 @@ import tweepy
 
 import uwu
 
+
+# todo: upgrade owoifier
+
+
+__version__ = '0.1.0'
+
+
 CONFIG_PATH = 'config.toml'
 DATA_PATH = 'tweets.json'
 
 
 def try_process(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.API):
-    with open(DATA_PATH) as data_file:
-        done_tweets = json.load(data_file)
-    done_ids, result_ids = zip(*done_tweets)
+    try:
+        with open(DATA_PATH) as data_file:
+            done_tweets = json.load(data_file)
+    except FileNotFoundError:
+        done_tweets = []
+        done_ids = []
+        result_ids = []
+    else:
+        done_ids, result_ids = zip(*done_tweets)
     # check if tweet is appropriate format, and not done before
-    if not tweet.entities.links:
+    if not tweet.entities['urls']:
         print(f'Tweet {tweet.id} does not have any links')
         return
     if tweet.id in done_ids:
         print(f'Tweet {tweet.id} already done, as {result_ids[done_ids.index(tweet.id)]}')
         return
 
-    embed_url: str = tweet.entities.urls[0]['url']
+    embed_url: str = tweet.entities['urls'][0]['url']
     embed_url_real = requests.get(embed_url).url
     if not re.match(url_regex, embed_url_real):
         print(f'Tweet {tweet.id} had a link that did not match the regex')
@@ -31,15 +44,16 @@ def try_process(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.API):
 
     # owoify, but do not edit the link
     tweet_content: str = tweet.text
-    tweet_content = tweet_content.replace(embed_url, '{urw}')  # universal resource wocator owo
+    tweet_content = tweet_content.replace(embed_url, '{uww}')  # universal wesource wocator
     tweet_content = uwu.owoify(tweet_content)
-    tweet_content = tweet_content.format(urw=embed_url)
+    tweet_content = tweet_content.format(uww=embed_url)
 
     status_update = api.update_status(tweet_content)
-    if status_update.ok:
+    if status_update:
         done_tweets.append((tweet.id, status_update.json()['id']))
         with open(DATA_PATH, 'w') as data_file:
             json.dump(done_tweets, data_file)
+    input()
 
     return status_update
 
