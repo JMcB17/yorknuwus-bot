@@ -1,5 +1,8 @@
+*.json
+*.db
 *.toml
 !.example.toml
+assets/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
