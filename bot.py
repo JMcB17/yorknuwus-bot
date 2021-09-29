@@ -17,8 +17,8 @@ def try_process(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.API):
     # check if tweet is appropriate format, and not done before
     if tweet.entities.links and re.match(url_regex, tweet.entities.links[0]) and tweet.id not in done_ids:
         # do not edit the link
-        embed_url = tweet.entities.urls[0]['url']
-        tweet_content = tweet.text
+        embed_url: str = tweet.entities.urls[0]['url']
+        tweet_content: str = tweet.text
         tweet_content = tweet_content.replace(embed_url, '{urw}')  # universal resource wocator owo
         tweet_content = uwu.owoify(tweet_content)
         tweet_content = tweet_content.format(urw=embed_url)
@@ -35,7 +35,8 @@ def try_process(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.API):
 def history(source: str, url_regex: re.Pattern, api: tweepy.API):
     # todo: paginate?
     # todo: parameter for how far back
-    tweet_history = api.user_timeline(screen_name=source, count=200)
+    tweet_history: list[tweepy.Tweet] = api.user_timeline(screen_name=source, count=200)
+    tweet_history.reverse()
     for tweet in tweet_history:
         try_process(tweet, url_regex, api)
 
