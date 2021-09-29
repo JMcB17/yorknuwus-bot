@@ -1,3 +1,4 @@
+import json
 import re
 
 import toml
@@ -6,11 +7,15 @@ import tweepy
 import uwu
 
 CONFIG_PATH = 'config.toml'
+DATA_PATH = 'tweets.json'
 
 
 def try_process(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.API):
-    # check if tweet is appropriate format
-    if tweet.entities.links and re.match(url_regex, tweet.entities.links[0]):
+    with open(DATA_PATH) as data_file:
+        done_tweets = json.load(data_file)
+    done_ids, result_ids = zip(*done_tweets)
+    # check if tweet is appropriate format, and not done before
+    if tweet.entities.links and re.match(url_regex, tweet.entities.links[0]) and tweet.id not in done_ids:
         # do not edit the link
         embed_url = tweet.entities.urls[0]['url']
         tweet_content = tweet.text
@@ -18,12 +23,17 @@ def try_process(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.API):
         tweet_content = uwu.owoify(tweet_content)
         tweet_content = tweet_content.format(urw=embed_url)
 
-        api.update_status(tweet_content)
+        status_update = api.update_status(tweet_content)
+        if status_update.ok:
+            done_tweets.append((tweet.id, status_update.json()['id']))
+            with open(DATA_PATH, 'w') as data_file:
+                json.dump(done_tweets, data_file)
+
+        return status_update
 
 
 def history(source: str, url_regex: re.Pattern, api: tweepy.API):
     # todo: paginate?
-    # todo: save ones already done
     # todo: parameter for how far back
     tweet_history = api.user_timeline(screen_name=source, count=200)
     for tweet in tweet_history:
