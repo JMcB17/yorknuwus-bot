@@ -1,6 +1,7 @@
 import json
 import re
 
+import requests
 import toml
 import tweepy
 
@@ -15,21 +16,32 @@ def try_process(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.API):
         done_tweets = json.load(data_file)
     done_ids, result_ids = zip(*done_tweets)
     # check if tweet is appropriate format, and not done before
-    if tweet.entities.links and re.match(url_regex, tweet.entities.links[0]) and tweet.id not in done_ids:
-        # do not edit the link
-        embed_url: str = tweet.entities.urls[0]['url']
-        tweet_content: str = tweet.text
-        tweet_content = tweet_content.replace(embed_url, '{urw}')  # universal resource wocator owo
-        tweet_content = uwu.owoify(tweet_content)
-        tweet_content = tweet_content.format(urw=embed_url)
+    if not tweet.entities.links:
+        print(f'Tweet {tweet.id} does not have any links')
+        return
+    if tweet.id in done_ids:
+        print(f'Tweet {tweet.id} already done, as {result_ids[done_ids.index(tweet.id)]}')
+        return
 
-        status_update = api.update_status(tweet_content)
-        if status_update.ok:
-            done_tweets.append((tweet.id, status_update.json()['id']))
-            with open(DATA_PATH, 'w') as data_file:
-                json.dump(done_tweets, data_file)
+    embed_url: str = tweet.entities.urls[0]['url']
+    embed_url_real = requests.get(embed_url).url
+    if not re.match(url_regex, embed_url_real):
+        print(f'Tweet {tweet.id} had a link that did not match the regex')
+        return
 
-        return status_update
+    # owoify, but do not edit the link
+    tweet_content: str = tweet.text
+    tweet_content = tweet_content.replace(embed_url, '{urw}')  # universal resource wocator owo
+    tweet_content = uwu.owoify(tweet_content)
+    tweet_content = tweet_content.format(urw=embed_url)
+
+    status_update = api.update_status(tweet_content)
+    if status_update.ok:
+        done_tweets.append((tweet.id, status_update.json()['id']))
+        with open(DATA_PATH, 'w') as data_file:
+            json.dump(done_tweets, data_file)
+
+    return status_update
 
 
 def history(source: str, url_regex: re.Pattern, api: tweepy.API):
