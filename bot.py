@@ -64,16 +64,19 @@ def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.AP
     tweet_content = tweet_content.format(uww=embed_url)
 
     # send tweet
-    status_update = api.update_status(tweet_content)
-    print(f'Parodied tweet {tweet.id} as {status_update.id}')
-    if status_update:
-        done_tweets.append((tweet.id, status_update.id))
-        with open(DATA_PATH, 'w') as data_file:
-            json.dump(done_tweets, data_file)
-    # todo: remove debug line
-    input()
+    try:
+        status_update = api.update_status(tweet_content)
+    except tweepy.BadRequest:
+        # todo: make owoifier ignore links better
+        print(f'Tweet {tweet.id} has broken urls')
+    else:
+        print(f'Parodied tweet {tweet.id} as {status_update.id}')
+        if status_update:
+            done_tweets.append((tweet.id, status_update.id))
+            with open(DATA_PATH, 'w') as data_file:
+                json.dump(done_tweets, data_file)
 
-    return status_update
+        return status_update
 
 
 def history(source: str, url_regex: re.Pattern, api: tweepy.API):
