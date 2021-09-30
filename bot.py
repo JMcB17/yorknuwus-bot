@@ -1,6 +1,7 @@
 import argparse
 import json
 import re
+import time
 
 import requests
 import toml
@@ -17,6 +18,7 @@ __version__ = '0.1.0'
 
 CONFIG_PATH = 'config.toml'
 DATA_PATH = 'tweets.json'
+INTERVAL_SECONDS = 60
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -31,6 +33,7 @@ def get_parser() -> argparse.ArgumentParser:
 
 
 def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.API):
+    # get list of tweets done before, check if this one is done before
     try:
         with open(DATA_PATH) as data_file:
             done_tweets = json.load(data_file)
@@ -40,14 +43,14 @@ def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.AP
         result_ids = []
     else:
         done_ids, result_ids = zip(*done_tweets)
-    # check if tweet is appropriate format, and not done before
+    if tweet.id in done_ids:
+        print(f'Tweet {tweet.id} already done, as {result_ids[done_ids.index(tweet.id)]}')
+        return 1
+
+    # check if tweet is desired format
     if not tweet.entities['urls']:
         print(f'Tweet {tweet.id} does not have any links')
         return
-    if tweet.id in done_ids:
-        print(f'Tweet {tweet.id} already done, as {result_ids[done_ids.index(tweet.id)]}')
-        return
-
     embed_url: str = tweet.entities['urls'][0]['url']
     embed_url_real = requests.get(embed_url).url
     if not re.match(url_regex, embed_url_real):
@@ -60,23 +63,41 @@ def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.AP
     tweet_content = uwu.owoify(tweet_content)
     tweet_content = tweet_content.format(uww=embed_url)
 
+    # send tweet
     status_update = api.update_status(tweet_content)
     if status_update:
         done_tweets.append((tweet.id, status_update.json()['id']))
         with open(DATA_PATH, 'w') as data_file:
             json.dump(done_tweets, data_file)
+    # todo: remove debug line
     input()
 
     return status_update
 
 
 def history(source: str, url_regex: re.Pattern, api: tweepy.API):
-    # todo: paginate?
-    # todo: parameter for how far back
-    tweet_history: list[tweepy.Tweet] = api.user_timeline(screen_name=source, count=200)
+    # create paginator for tweet history
+    tweet_history_cursor = tweepy.Cursor(api.user_timeline, screen_name=source, count=200).items()
+    # get entire tweet history, reverse it
+    tweet_history = list(tweet_history_cursor)
     tweet_history.reverse()
+
+    # do every past tweet
     for tweet in tweet_history:
         try_process_tweet(tweet, url_regex, api)
+
+
+def run(source: str, url_regex: re.Pattern, api: tweepy.API, interval: float = INTERVAL_SECONDS):
+    while True:
+        print(f'Sleeping for {interval} seconds')
+        time.sleep(interval)
+
+        tweet_history_cursor = tweepy.Cursor(api.user_timeline, screen_name=source).items()
+        for tweet in tweet_history_cursor:
+            result = try_process_tweet(tweet, url_regex, api)
+            # returned when reached a tweet that's done already
+            if result == 1:
+                break
 
 
 def test_get_status(api: tweepy.API, status_id: int = 1441796147778138113):
@@ -101,7 +122,7 @@ def main():
     elif args.history:
         history(config['settings']['source'], url_regex, api)
     else:
-        raise NotImplementedError
+        run(config['settings']['source'], url_regex, api)
 
 
 if __name__ == '__main__':
