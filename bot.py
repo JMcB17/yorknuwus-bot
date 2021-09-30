@@ -1,3 +1,4 @@
+import argparse
 import json
 import re
 
@@ -18,7 +19,18 @@ CONFIG_PATH = 'config.toml'
 DATA_PATH = 'tweets.json'
 
 
-def try_process(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.API):
+def get_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+
+    parser.add_argument('--version', action='version', version=__version__)
+    parser.add_argument('-t', '--test-get-status', action='store_true', help='Debugging')
+    parser.add_argument('-hi', '--history', action='store_true', help='Do all the past tweets of the source account')
+    parser.add_argument('-r', '--run', action='store_true', default=True, help='Run the bot. The default')
+
+    return parser
+
+
+def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.API):
     try:
         with open(DATA_PATH) as data_file:
             done_tweets = json.load(data_file)
@@ -64,7 +76,7 @@ def history(source: str, url_regex: re.Pattern, api: tweepy.API):
     tweet_history: list[tweepy.Tweet] = api.user_timeline(screen_name=source, count=200)
     tweet_history.reverse()
     for tweet in tweet_history:
-        try_process(tweet, url_regex, api)
+        try_process_tweet(tweet, url_regex, api)
 
 
 def test_get_status(api: tweepy.API, status_id: int = 1441796147778138113):
@@ -81,8 +93,15 @@ def main():
     auth = tweepy.OAuthHandler(config['auth']['consumer_key'], config['auth']['consumer_secret'])
     auth.set_access_token(config['auth']['access_token'], config['auth']['access_token_secret'])
     api = tweepy.API(auth)
-    # todo: argparse option for this
-    history(config['settings']['source'], url_regex, api)
+
+    parser = get_parser()
+    args = parser.parse_args()
+    if args.test_get_status:
+        test_get_status(api)
+    elif args.history:
+        history(config['settings']['source'], url_regex, api)
+    else:
+        raise NotImplementedError
 
 
 if __name__ == '__main__':
