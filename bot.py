@@ -96,7 +96,7 @@ def get_full_tweet_history_cached(
     cache_dir.mkdir(exist_ok=True)
     history_cache_path = cache_dir / f'{user.id}.pickle'
     try:
-        with open(history_cache_path) as history_cache_file:
+        with open(history_cache_path, 'rb') as history_cache_file:
             tweet_history = pickle.load(history_cache_file)
     except FileNotFoundError:
         pass
@@ -113,7 +113,7 @@ def get_full_tweet_history_cached(
     tweet_history.reverse()
 
     # save history to cache
-    with open(history_cache_path, 'w') as history_cache_file:
+    with open(history_cache_path, 'wb') as history_cache_file:
         pickle.dump(tweet_history, history_cache_file)
     print('Saved tweet history to cache')
 
