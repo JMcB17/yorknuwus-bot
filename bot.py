@@ -62,7 +62,7 @@ def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.AP
         return
     embed_url: str = tweet.entities['urls'][0]['url']
     try:
-        # todo: speed up by caching redirect urls
+        # todo: speed up by caching redirect urls or using a more efficient way of checking without getting page
         embed_url_real = requests.get(embed_url).url
     except requests.ConnectionError:
         print(f'Tweet {tweet.id} had a broken link')
