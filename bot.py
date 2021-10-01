@@ -93,6 +93,7 @@ def get_full_tweet_history_cached(
 ) -> list[Tweet]:
     # check if tweet history is cached as a pickle file
     user: User = api.get_user(screen_name=screen_name)
+    cache_dir.mkdir(exist_ok=True)
     history_cache_path = cache_dir / f'{user.id}.pickle'
     try:
         with open(history_cache_path) as history_cache_file:
