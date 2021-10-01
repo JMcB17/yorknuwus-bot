@@ -3,26 +3,28 @@ import json
 import pickle
 import re
 import time
+from pathlib import Path
 
 import requests
 import toml
 import tweepy
+from tweepy import API, User, Tweet
 
 import uwu
 
 
 # todo: upgrade owoifier with easter eggs and whatever
-# todo: pickle tweet history
 # todo: record skipped tweets
 # todo: webhooks
 # todo: refactor object oriented with API subclass
 
 
-__version__ = '0.1.0'
+__version__ = '0.2.0'
 
 
 CONFIG_PATH = 'config.toml'
 DATA_PATH = 'tweets.json'
+HISTORY_CACHE_DIR = Path('history/')
 INTERVAL_SECONDS = 60
 
 
@@ -84,7 +86,21 @@ def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.AP
         return status_update
 
 
-def get_full_tweet_history_cached(api: tweepy.API, screen_name: str) -> list[tweepy.Tweet]:
+def get_full_tweet_history_cached(
+        api: API, screen_name: str, cache_dir: Path = HISTORY_CACHE_DIR
+) -> list[Tweet]:
+    # check if tweet history is cached as a pickle file
+    user: User = api.get_user(screen_name=screen_name)
+    history_cache_path = cache_dir / f'{user.id}.pickle'
+    try:
+        with open(history_cache_path) as history_cache_file:
+            tweet_history = pickle.load(history_cache_file)
+    except FileNotFoundError:
+        pass
+    else:
+        print('Loaded tweet history from cache')
+        return tweet_history
+
     # create paginator for tweet history
     tweet_history_cursor = tweepy.Cursor(api.user_timeline, screen_name=screen_name, count=200).items()
     # get entire tweet history, reverse it
@@ -92,6 +108,11 @@ def get_full_tweet_history_cached(api: tweepy.API, screen_name: str) -> list[twe
     tweet_history = list(tweet_history_cursor)
     print(f'Got {len(tweet_history)} tweets')
     tweet_history.reverse()
+
+    # save history to cache
+    with open(history_cache_path, 'w') as history_cache_file:
+        pickle.dump(tweet_history, history_cache_file)
+    print('Saved tweet history to cache')
 
     return tweet_history
 
