@@ -1,5 +1,6 @@
 import argparse
 import json
+import pickle
 import re
 import time
 
@@ -10,7 +11,11 @@ import tweepy
 import uwu
 
 
-# todo: upgrade owoifier
+# todo: upgrade owoifier with easter eggs and whatever
+# todo: pickle tweet history
+# todo: record skipped tweets
+# todo: webhooks
+# todo: refactor object oriented with API subclass
 
 
 __version__ = '0.1.0'
@@ -79,14 +84,20 @@ def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.AP
         return status_update
 
 
-def history(source: str, url_regex: re.Pattern, api: tweepy.API):
+def get_full_tweet_history_cached(api: tweepy.API, screen_name: str) -> list[tweepy.Tweet]:
     # create paginator for tweet history
-    tweet_history_cursor = tweepy.Cursor(api.user_timeline, screen_name=source, count=200).items()
+    tweet_history_cursor = tweepy.Cursor(api.user_timeline, screen_name=screen_name, count=200).items()
     # get entire tweet history, reverse it
     print('Getting tweet history, this may take some time')
     tweet_history = list(tweet_history_cursor)
     print(f'Got {len(tweet_history)} tweets')
     tweet_history.reverse()
+
+    return tweet_history
+
+
+def history(source: str, url_regex: re.Pattern, api: tweepy.API):
+    tweet_history = get_full_tweet_history_cached(api, source)
 
     # do every past tweet
     for tweet in tweet_history:
