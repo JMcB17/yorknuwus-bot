@@ -42,6 +42,7 @@ def get_parser() -> argparse.ArgumentParser:
 # noinspection PyUnboundLocalVariable
 def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.API):
     # get list of tweets done before, check if this one is done before
+    # todo: speed up by keeping file open for history
     try:
         with open(DATA_PATH) as data_file:
             done_tweets = json.load(data_file)
@@ -60,7 +61,12 @@ def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.AP
         print(f'Tweet {tweet.id} does not have any links')
         return
     embed_url: str = tweet.entities['urls'][0]['url']
-    embed_url_real = requests.get(embed_url).url
+    try:
+        # todo: speed up by caching redirect urls
+        embed_url_real = requests.get(embed_url).url
+    except requests.ConnectionError:
+        print(f'Tweet {tweet.id} had a broken link')
+        return
     if not re.match(url_regex, embed_url_real):
         print(f'Tweet {tweet.id} had a link that did not match the regex')
         return
@@ -76,7 +82,7 @@ def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.AP
         status_update = api.update_status(tweet_content)
     except tweepy.BadRequest:
         # todo: make owoifier ignore links better
-        print(f'Tweet {tweet.id} has broken urls, skipping')
+        print(f'Tweet {tweet.id} has broken owoified urls, skipping')
         # 0 if tweet skipped
         this_done_id = 0
     else:
