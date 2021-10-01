@@ -14,7 +14,7 @@ import uwu
 
 
 # todo: upgrade owoifier with easter eggs and whatever
-# todo: webhooks
+# todo: webhooks for getting new tweets from source, better than periodically checking
 # todo: refactor object oriented with API subclass
 
 
@@ -38,6 +38,8 @@ def get_parser() -> argparse.ArgumentParser:
     return parser
 
 
+# for this_done_id
+# noinspection PyUnboundLocalVariable
 def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.API):
     # get list of tweets done before, check if this one is done before
     try:
@@ -74,15 +76,13 @@ def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.AP
         status_update = api.update_status(tweet_content)
     except tweepy.BadRequest:
         # todo: make owoifier ignore links better
-        print(f'Tweet {tweet.id} has broken urls')
+        print(f'Tweet {tweet.id} has broken urls, skipping')
         # 0 if tweet skipped
         this_done_id = 0
     else:
-        print(f'Parodied tweet {tweet.id} as {status_update.id}')
         this_done_id = status_update.id
     finally:
-        # dumbass pycharm
-        # noinspection PyUnboundLocalVariable
+        print(f'Parodied tweet {tweet.id} as {this_done_id}')
         done_tweets.append((tweet.id, this_done_id))
         with open(DATA_PATH, 'w') as data_file:
             json.dump(done_tweets, data_file)
