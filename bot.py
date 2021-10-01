@@ -14,12 +14,11 @@ import uwu
 
 
 # todo: upgrade owoifier with easter eggs and whatever
-# todo: record skipped tweets
 # todo: webhooks
 # todo: refactor object oriented with API subclass
 
 
-__version__ = '0.2.0'
+__version__ = '0.3.0'
 
 
 CONFIG_PATH = 'config.toml'
@@ -76,14 +75,17 @@ def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.AP
     except tweepy.BadRequest:
         # todo: make owoifier ignore links better
         print(f'Tweet {tweet.id} has broken urls')
+        # 0 if tweet skipped
+        this_done_id = 0
     else:
         print(f'Parodied tweet {tweet.id} as {status_update.id}')
-        if status_update:
-            done_tweets.append((tweet.id, status_update.id))
-            with open(DATA_PATH, 'w') as data_file:
-                json.dump(done_tweets, data_file)
-
-        return status_update
+        this_done_id = status_update.id
+    finally:
+        # dumbass pycharm
+        # noinspection PyUnboundLocalVariable
+        done_tweets.append((tweet.id, this_done_id))
+        with open(DATA_PATH, 'w') as data_file:
+            json.dump(done_tweets, data_file)
 
 
 def get_full_tweet_history_cached(
