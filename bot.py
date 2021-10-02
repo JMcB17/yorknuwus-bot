@@ -46,8 +46,6 @@ def save_done_tweet(tweet: Tweet, this_done_id: Union[int, str], done_tweets: li
         json.dump(done_tweets, data_file)
 
 
-# for this_done_id
-# noinspection PyUnboundLocalVariable
 def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.API):
     # get list of tweets done before, check if this one is done before
     # todo: speed up by keeping file open for history
@@ -96,8 +94,7 @@ def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.AP
         this_done_id = 'broken_owoified_url'
     else:
         this_done_id = status_update.id
-    finally:
-        save_done_tweet(tweet, this_done_id, done_tweets)
+    save_done_tweet(tweet, this_done_id, done_tweets)
 
 
 def get_full_tweet_history_cached(
