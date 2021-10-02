@@ -15,11 +15,10 @@ import uwu
 
 
 # todo: upgrade owoifier with easter eggs and whatever
-# todo: webhooks for getting new tweets from source, better than periodically checking
 # todo: refactor object oriented with API subclass
 
 
-__version__ = '0.3.0'
+__version__ = '0.4.0'
 
 
 CONFIG_PATH = 'config.toml'
@@ -48,7 +47,6 @@ def save_done_tweet(tweet: Tweet, this_done_id: Union[int, str], done_tweets: li
 
 def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.API):
     # get list of tweets done before, check if this one is done before
-    # todo: speed up by keeping file open for history
     try:
         with open(DATA_PATH) as data_file:
             done_tweets = json.load(data_file)
@@ -137,7 +135,7 @@ def history(source: str, url_regex: re.Pattern, api: tweepy.API):
         try_process_tweet(tweet, url_regex, api)
 
 
-def run(source: str, url_regex: re.Pattern, api: tweepy.API, interval: float = INTERVAL_SECONDS):
+def run_periodic(source: str, url_regex: re.Pattern, api: tweepy.API, interval: float = INTERVAL_SECONDS):
     print('Running bot')
     while True:
         print(f'Sleeping for {interval} seconds')
@@ -154,6 +152,17 @@ def run(source: str, url_regex: re.Pattern, api: tweepy.API, interval: float = I
 def test_get_status(api: tweepy.API, status_id: int = 1441796147778138113):
     bbb = api.get_status(status_id)
     print(bbb)
+
+
+class LiveTweetOwoifier(tweepy.Stream):
+    def __init__(self, api: API, url_regex: re.Pattern, *args, **kwargs):
+        self.api = api
+        self.url_regex = url_regex
+
+        super().__init__(*args, **kwargs)
+
+    def on_status(self, status: Tweet):
+        try_process_tweet(status, self.url_regex, self.api)
 
 
 def main():
@@ -173,7 +182,13 @@ def main():
     elif args.history:
         history(config['settings']['source'], url_regex, api)
     else:
-        run(config['settings']['source'], url_regex, api)
+        stream = LiveTweetOwoifier(
+            api,
+            url_regex,
+            config['auth']['consumer_key'], config['auth']['consumer_secret'],
+            config['auth']['access_token'], config['auth']['access_token_secret']
+        )
+        stream.filter(follow=config['settings']['source'])
 
 
 if __name__ == '__main__':
