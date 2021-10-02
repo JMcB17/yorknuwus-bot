@@ -4,6 +4,7 @@ import pickle
 import re
 import time
 from pathlib import Path
+from typing import Union
 
 import requests
 import toml
@@ -38,6 +39,13 @@ def get_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def save_done_tweet(tweet: Tweet, this_done_id: Union[int, str], done_tweets: list[tuple[int, Union[int, str]]]):
+    print(f'Parodied tweet {tweet.id} as {this_done_id}')
+    done_tweets.append((tweet.id, this_done_id))
+    with open(DATA_PATH, 'w') as data_file:
+        json.dump(done_tweets, data_file)
+
+
 # for this_done_id
 # noinspection PyUnboundLocalVariable
 def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.API):
@@ -59,16 +67,18 @@ def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.AP
     # check if tweet is desired format
     if not tweet.entities['urls']:
         print(f'Tweet {tweet.id} does not have any links')
+        save_done_tweet(tweet, 'no_links', done_tweets)
         return
     embed_url: str = tweet.entities['urls'][0]['url']
     try:
-        # todo: speed up by caching redirect urls or using a more efficient way of checking without getting page
         embed_url_real = requests.get(embed_url).url
     except requests.ConnectionError:
         print(f'Tweet {tweet.id} had a broken link')
+        save_done_tweet(tweet, 'broken_link', done_tweets)
         return
     if not re.match(url_regex, embed_url_real):
         print(f'Tweet {tweet.id} had a link that did not match the regex')
+        save_done_tweet(tweet, 'link_no_match', done_tweets)
         return
 
     # owoify, but do not edit the link
@@ -83,15 +93,11 @@ def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.AP
     except tweepy.BadRequest:
         # todo: make owoifier ignore links better
         print(f'Tweet {tweet.id} has broken owoified urls, skipping')
-        # 0 if tweet skipped
-        this_done_id = 0
+        this_done_id = 'broken_owoified_url'
     else:
         this_done_id = status_update.id
     finally:
-        print(f'Parodied tweet {tweet.id} as {this_done_id}')
-        done_tweets.append((tweet.id, this_done_id))
-        with open(DATA_PATH, 'w') as data_file:
-            json.dump(done_tweets, data_file)
+        save_done_tweet(tweet, this_done_id, done_tweets)
 
 
 def get_full_tweet_history_cached(
