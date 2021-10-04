@@ -134,7 +134,7 @@ def history(source: str, url_regex: re.Pattern, api: tweepy.API):
     for tweet in tweet_history:
         try_process_tweet(tweet, url_regex, api)
 
-    print('Finished tweet history! Existing')
+    print('Finished tweet history! Exiting')
 
 
 def run_periodic(source: str, url_regex: re.Pattern, api: tweepy.API, interval: float = INTERVAL_SECONDS):
