@@ -18,7 +18,7 @@ import uwu
 # todo: refactor object oriented with API subclass
 
 
-__version__ = '0.4.0'
+__version__ = '0.5.0'
 
 
 CONFIG_PATH = 'config.toml'
@@ -138,7 +138,7 @@ def history(source: str, url_regex: re.Pattern, api: tweepy.API):
 
 
 def run_periodic(source: str, url_regex: re.Pattern, api: tweepy.API, interval: float = INTERVAL_SECONDS):
-    print('Running bot')
+    print('Running bot in periodic mode')
     while True:
         print(f'Sleeping for {interval} seconds')
         time.sleep(interval)
@@ -167,6 +167,12 @@ class LiveTweetOwoifier(tweepy.Stream):
         try_process_tweet(status, self.url_regex, self.api)
 
 
+def run_stream(source: str, api: API, stream: LiveTweetOwoifier):
+    print('Running bot in streaming mode')
+    source_id = api.get_user(screen_name=source).id
+    stream.filter(follow=[source_id])
+
+
 def main():
     with open(CONFIG_PATH) as config_file:
         config = toml.load(config_file)
@@ -190,7 +196,7 @@ def main():
             config['auth']['consumer_key'], config['auth']['consumer_secret'],
             config['auth']['access_token'], config['auth']['access_token_secret']
         )
-        stream.filter(follow=config['settings']['source'])
+        run_stream(config['settings']['source'], api, stream)
 
 
 if __name__ == '__main__':
