@@ -9,7 +9,7 @@ from typing import Union
 import requests
 import toml
 import tweepy
-from tweepy import API, User, Tweet
+from tweepy import API, Stream, User, Tweet
 
 import uwu
 
@@ -45,7 +45,7 @@ def save_done_tweet(tweet: Tweet, this_done_id: Union[int, str], done_tweets: li
         json.dump(done_tweets, data_file)
 
 
-def try_process_tweet(tweet: tweepy.Tweet, url_regex: re.Pattern, api: tweepy.API):
+def try_process_tweet(tweet: Tweet, url_regex: re.Pattern, api: API):
     # get list of tweets done before, check if this one is done before
     try:
         with open(DATA_PATH) as data_file:
@@ -127,7 +127,7 @@ def get_full_tweet_history_cached(
     return tweet_history
 
 
-def history(source: str, url_regex: re.Pattern, api: tweepy.API):
+def history(source: str, url_regex: re.Pattern, api: API):
     tweet_history = get_full_tweet_history_cached(api, source)
 
     # do every past tweet
@@ -137,7 +137,7 @@ def history(source: str, url_regex: re.Pattern, api: tweepy.API):
     print('Finished tweet history! Exiting')
 
 
-def run_periodic(source: str, url_regex: re.Pattern, api: tweepy.API, interval: float = INTERVAL_SECONDS):
+def run_periodic(source: str, url_regex: re.Pattern, api: API, interval: float = INTERVAL_SECONDS):
     print('Running bot in periodic mode')
     while True:
         print(f'Sleeping for {interval} seconds')
@@ -151,12 +151,12 @@ def run_periodic(source: str, url_regex: re.Pattern, api: tweepy.API, interval: 
                 break
 
 
-def test_get_status(api: tweepy.API, status_id: int = 1441796147778138113):
+def test_get_status(api: API, status_id: int = 1441796147778138113):
     bbb = api.get_status(status_id)
     print(bbb)
 
 
-class LiveTweetOwoifier(tweepy.Stream):
+class LiveTweetOwoifier(Stream):
     def __init__(self, api: API, url_regex: re.Pattern, *args, **kwargs):
         self.api = api
         self.url_regex = url_regex
@@ -181,7 +181,7 @@ def main():
 
     auth = tweepy.OAuthHandler(config['auth']['consumer_key'], config['auth']['consumer_secret'])
     auth.set_access_token(config['auth']['access_token'], config['auth']['access_token_secret'])
-    api = tweepy.API(auth)
+    api = API(auth)
 
     parser = get_parser()
     args = parser.parse_args()
